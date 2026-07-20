@@ -32,8 +32,23 @@ describe("Windows 首次联网安装器", () => {
   it("根启动器从自身目录调用在线安装脚本", async () => {
     const launcher = await fs.readFile(path.join(projectRoot, "START_HERE.bat"), "utf8");
 
-    expect(launcher).toContain('call "%~dp0scripts\\windows-online\\install-and-start.bat"');
-    expect(launcher).toContain("exit /b %ERRORLEVEL%");
+    expect(launcher).toContain(
+      'set "INSTALLER=%~dp0scripts\\windows-online\\install-and-start.bat"',
+    );
+    expect(launcher).toContain('if not exist "%INSTALLER%"');
+    expect(launcher).toContain('cmd.exe /d /c call "%INSTALLER%"');
+    expect(launcher).toContain('set "EXIT_CODE=%ERRORLEVEL%"');
+  });
+
+  it("内层脚本提前退出时根启动器仍显示错误并暂停", async () => {
+    const launcher = await fs.readFile(path.join(projectRoot, "START_HERE.bat"), "utf8");
+
+    expect(launcher).toContain("Startup failed, exit code: %EXIT_CODE%");
+    expect(launcher).toContain("startup_logs");
+    expect(launcher).toMatch(
+      /if not "%EXIT_CODE%"=="0" \([\s\S]*pause[\s\S]*exit \/b %EXIT_CODE%[\s\S]*\)/u,
+    );
+    expect(launcher).toMatch(/The downloader has stopped\.[\s\S]*pause/u);
   });
 
   it("检测 Node 20，并在缺失或版本过低时通过 winget 安装 LTS", async () => {
@@ -158,5 +173,19 @@ describe("Windows 在线安装版源码 ZIP", () => {
     expect(gitignore).toContain("startup_logs/");
     expect(gitignore).toContain(".windows-runtime/");
     expect(stats.mode & 0o111).not.toBe(0);
+  });
+
+  it("GitHub Actions 在真实 Windows 中文空格路径中执行首次启动", async () => {
+    const workflow = await fs.readFile(
+      path.join(projectRoot, ".github", "workflows", "test-windows-online.yml"),
+      "utf8",
+    );
+
+    expect(workflow).toContain("runs-on: windows-latest");
+    expect(workflow).toContain("START_HERE.bat");
+    expect(workflow).toContain("中文 空格");
+    expect(workflow).toContain("http://127.0.0.1:3210/api/health");
+    expect(workflow).toContain("startup_logs");
+    expect(workflow).toContain("tools\\yt-dlp.exe");
   });
 });

@@ -1,0 +1,83 @@
+name: Test Windows online installer
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  first-run-smoke-test:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Run START_HERE in a Chinese path with spaces
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $testRoot = Join-Path $env:RUNNER_TEMP "中文 空格\HD Video Downloader"
+          New-Item -ItemType Directory -Force -Path $testRoot | Out-Null
+          Get-ChildItem -LiteralPath $env:GITHUB_WORKSPACE -Force |
+            Where-Object { $_.Name -ne ".git" } |
+            Copy-Item -Destination $testRoot -Recurse -Force
+
+          $process = Start-Process -FilePath "cmd.exe" `
+            -ArgumentList @("/d", "/c", "START_HERE.bat") `
+            -WorkingDirectory $testRoot `
+            -PassThru
+
+          try {
+            $deadline = (Get-Date).AddMinutes(20)
+            $healthy = $false
+            while ((Get-Date) -lt $deadline) {
+              if ($process.HasExited) {
+                Get-ChildItem -Path (Join-Path $testRoot "startup_logs") -ErrorAction SilentlyContinue |
+                  Sort-Object LastWriteTime |
+                  ForEach-Object { Get-Content -LiteralPath $_.FullName }
+                throw "START_HERE.bat exited before the server became healthy: $($process.ExitCode)"
+              }
+
+              try {
+                $health = Invoke-RestMethod -Uri "http://127.0.0.1:3210/api/health" -TimeoutSec 5
+                if ($health.ok -eq $true) {
+                  $healthy = $true
+                  break
+                }
+              } catch {
+                Start-Sleep -Seconds 5
+              }
+            }
+
+            if (-not $healthy) {
+              Get-ChildItem -Path (Join-Path $testRoot "startup_logs") -ErrorAction SilentlyContinue |
+                Sort-Object LastWriteTime |
+                ForEach-Object { Get-Content -LiteralPath $_.FullName }
+              throw "Local server did not become healthy before timeout"
+            }
+
+            $requiredPaths = @(
+              "node_modules",
+              ".windows-runtime\ms-playwright",
+              "tools\yt-dlp.exe",
+              "startup_logs"
+            )
+            foreach ($relativePath in $requiredPaths) {
+              if (-not (Test-Path -LiteralPath (Join-Path $testRoot $relativePath))) {
+                throw "Missing first-run component: $relativePath"
+              }
+            }
+          } finally {
+            if (-not $process.HasExited) {
+              taskkill.exe /PID $process.Id /T /F | Out-Null
+            }
+          }
