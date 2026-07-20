@@ -1,0 +1,11 @@
+node_modules/
+.temp/
+coverage/
+dist/
+.vinext/
+.wrangler/
+tools/yt-dlp*
+export/*
+!export/.gitkeep
+*.part
+.DS_Store

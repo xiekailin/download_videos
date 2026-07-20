@@ -1,0 +1,45 @@
+name: Build Windows portable ZIP
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows-portable:
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22.23.1
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.23.1
+          cache: npm
+
+      - name: Install test dependencies
+        shell: pwsh
+        run: npm ci --no-audit --no-fund
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+
+      - name: Test portable build contract
+        shell: pwsh
+        run: npx vitest run tests/windows-portable.test.mjs --config vitest.config.mjs
+
+      - name: Build portable ZIP
+        shell: pwsh
+        run: node scripts/build-windows-portable.mjs
+
+      # upload-artifact 会生成下载 ZIP。直接上传目录可避免 ZIP 再包一层 ZIP。
+      - name: Upload portable package
+        uses: actions/upload-artifact@v4
+        with:
+          name: HD-Video-Downloader-Windows-x64
+          path: dist/高清视频下载器-Windows-x64
+          if-no-files-found: error
+          retention-days: 14

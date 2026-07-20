@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f6f4ef" />
+    <title>高清视频下载器</title>
+    <meta
+      name="description"
+      content="粘贴央视、共产党员网、微信、求是等视频网页链接，一键下载高清文件。"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="高清视频下载器首页">
+          <span class="brand-mark" aria-hidden="true"><i></i></span>
+          <span>高清视频下载器</span>
+        </a>
+        <div class="local-status"><span aria-hidden="true"></span>本地运行</div>
+      </header>
+
+      <section class="hero" aria-labelledby="page-title">
+        <p class="eyebrow">COPY · CLICK · DONE</p>
+        <h1 id="page-title">把网页里的高清画面<br />原样保存下来</h1>
+        <p class="hero-copy">
+          支持央视播放器高清捕获，也支持微信、求是和常见视频网站。文件只保存在你的电脑里。
+        </p>
+      </section>
+
+      <section class="download-panel" aria-label="新建下载任务">
+        <form id="download-form">
+          <div class="field-head">
+            <label for="video-links">视频网页链接</label>
+            <button id="paste-button" class="text-button" type="button">粘贴</button>
+          </div>
+          <textarea
+            id="video-links"
+            name="links"
+            rows="5"
+            placeholder="粘贴一个或多个链接，每行一个…"
+            spellcheck="false"
+            required
+          ></textarea>
+
+          <div class="panel-footer">
+            <div class="site-list" aria-label="重点支持的网站">
+              <span>央视网</span><span>共产党员网</span><span>微信</span><span>求是网</span><span>通用站点</span>
+            </div>
+            <button id="submit-button" class="primary-button" type="submit">
+              <span>开始下载</span><b aria-hidden="true">↓</b>
+            </button>
+          </div>
+
+          <details class="advanced">
+            <summary>网络访问需要代理？</summary>
+            <div class="proxy-row">
+              <label for="proxy">代理地址（可选）</label>
+              <input id="proxy" type="text" placeholder="例如 http://127.0.0.1:7897" />
+            </div>
+          </details>
+        </form>
+        <p id="form-message" class="form-message" role="alert" aria-live="polite"></p>
+      </section>
+
+      <section class="task-section" aria-labelledby="task-title">
+        <div class="section-head">
+          <div>
+            <p class="section-kicker">DOWNLOAD QUEUE</p>
+            <h2 id="task-title">下载任务</h2>
+          </div>
+          <div class="section-actions">
+            <button id="clear-button" class="ghost-button" type="button">清除已完成</button>
+            <button id="open-folder-button" class="ghost-button strong" type="button">打开 export 文件夹</button>
+          </div>
+        </div>
+        <div id="task-list" class="task-list" aria-live="polite">
+          <div class="empty-state">
+            <span class="empty-arrow" aria-hidden="true">↓</span>
+            <h3>还没有下载任务</h3>
+            <p>粘贴链接后，解析、下载、封装和校验进度会显示在这里。</p>
+          </div>
+        </div>
+      </section>
+
+      <footer>
+        <span>文件保存位置</span>
+        <code id="export-path">正在读取…</code>
+        <span>仅下载你有权保存的内容</span>
+      </footer>
+    </main>
+    <script src="/app.js" defer></script>
+  </body>
+</html>
