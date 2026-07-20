@@ -2,12 +2,13 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
   PORTABLE_CONFIG,
   archiveCheckDirectory,
   assertPortableContents,
+  copyDirectoryAcrossDevices,
   extractedPortableRoot,
   launcherScript,
   npmInstallCommand,
@@ -39,6 +40,50 @@ async function touch(filePath) {
 }
 
 describe("Windows 便携包配置", () => {
+  it("跨盘转移目录时通过复制后清理，不依赖 rename", async () => {
+    const directory = await makeTemporaryDirectory();
+    const source = path.join(directory, "C-temp", "node-runtime");
+    const destination = path.join(directory, "D-workspace", "runtime", "node");
+    await touch(path.join(source, "bin", "node.exe"));
+    const rename = vi.fn(async () => {
+      const error = new Error("cross-device link not permitted");
+      error.code = "EXDEV";
+      throw error;
+    });
+    const fileSystem = {
+      cp: fs.cp.bind(fs),
+      rename,
+      rm: fs.rm.bind(fs),
+    };
+
+    await copyDirectoryAcrossDevices(source, destination, fileSystem);
+
+    await expect(fs.readFile(path.join(destination, "bin", "node.exe"), "utf8")).resolves.toBe(
+      "test",
+    );
+    await expect(fs.access(source)).rejects.toThrow();
+    expect(rename).not.toHaveBeenCalled();
+  });
+
+  it("跨盘复制失败时保留源目录", async () => {
+    const directory = await makeTemporaryDirectory();
+    const source = path.join(directory, "node-runtime");
+    const destination = path.join(directory, "runtime", "node");
+    await touch(path.join(source, "node.exe"));
+    const copyError = new Error("copy failed");
+    const rm = vi.fn(fs.rm.bind(fs));
+
+    await expect(
+      copyDirectoryAcrossDevices(source, destination, {
+        cp: vi.fn().mockRejectedValue(copyError),
+        rm,
+      }),
+    ).rejects.toBe(copyError);
+
+    await expect(fs.readFile(path.join(source, "node.exe"), "utf8")).resolves.toBe("test");
+    expect(rm).not.toHaveBeenCalled();
+  });
+
   it("使用固定版本与带版本的官方下载地址", () => {
     expect(PORTABLE_CONFIG.node.version).toMatch(/^v\d+\.\d+\.\d+$/u);
     expect(PORTABLE_CONFIG.node.url).toContain(`/${PORTABLE_CONFIG.node.version}/`);

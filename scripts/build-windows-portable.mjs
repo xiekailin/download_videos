@@ -209,6 +209,11 @@ async function installProductionDependencies(portableRoot) {
   await prunePortableDependencies(portableRoot);
 }
 
+export async function copyDirectoryAcrossDevices(source, destination, fileSystem = fs) {
+  await fileSystem.cp(source, destination, { recursive: true });
+  await fileSystem.rm(source, { recursive: true, force: true });
+}
+
 async function installNodeRuntime(portableRoot, temporaryDirectory) {
   const archivePath = path.join(temporaryDirectory, "node-win-x64.zip");
   const expandedDirectory = path.join(temporaryDirectory, "node-expanded");
@@ -219,7 +224,7 @@ async function installNodeRuntime(portableRoot, temporaryDirectory) {
     `node-${PORTABLE_CONFIG.node.version}-win-x64`,
   );
   await fs.mkdir(path.join(portableRoot, "runtime"), { recursive: true });
-  await fs.rename(extractedRoot, path.join(portableRoot, "runtime", "node"));
+  await copyDirectoryAcrossDevices(extractedRoot, path.join(portableRoot, "runtime", "node"));
 }
 
 async function writeBuildManifest(portableRoot) {
