@@ -32,13 +32,20 @@ export function launcherScript() {
   return fsSync.readFileSync(launcherTemplate, "utf8");
 }
 
-export function portablePaths(rootDirectory) {
+export function portablePaths(rootDirectory, pathApi = path) {
+  const ffmpegExecutable = pathApi.join(
+    rootDirectory,
+    "node_modules",
+    "ffmpeg-static",
+    "ffmpeg.exe",
+  );
   return {
-    nodeExecutable: path.join(rootDirectory, "runtime", "node", "node.exe"),
-    browserDirectory: path.join(rootDirectory, "runtime", "ms-playwright"),
-    ytDlpExecutable: path.join(rootDirectory, "tools", "yt-dlp.exe"),
-    ffmpegExecutable: path.join(rootDirectory, "node_modules", "ffmpeg-static", "ffmpeg.exe"),
-    ffprobeExecutable: path.join(
+    nodeExecutable: pathApi.join(rootDirectory, "runtime", "node", "node.exe"),
+    browserDirectory: pathApi.join(rootDirectory, "runtime", "ms-playwright"),
+    ytDlpExecutable: pathApi.join(rootDirectory, "tools", "yt-dlp.exe"),
+    ffmpegExecutable,
+    ffmpegLicense: `${ffmpegExecutable}.LICENSE`,
+    ffprobeExecutable: pathApi.join(
       rootDirectory,
       "node_modules",
       "ffprobe-static",
@@ -47,7 +54,7 @@ export function portablePaths(rootDirectory) {
       "x64",
       "ffprobe.exe",
     ),
-    launcher: path.join(rootDirectory, "启动下载器.bat"),
+    launcher: pathApi.join(rootDirectory, "启动下载器.bat"),
   };
 }
 
@@ -95,7 +102,7 @@ export async function assertPortableContents(rootDirectory) {
     path.join(rootDirectory, "runtime", "node", "LICENSE"),
     path.join(rootDirectory, "node_modules", "playwright", "LICENSE"),
     path.join(rootDirectory, "node_modules", "ffmpeg-static", "LICENSE"),
-    path.join(rootDirectory, "node_modules", "ffmpeg-static", "ffmpeg.LICENSE"),
+    paths.ffmpegLicense,
     path.join(rootDirectory, "node_modules", "ffprobe-static", "LICENSE"),
     path.join(rootDirectory, "第三方组件说明.txt"),
   ];
@@ -227,6 +234,22 @@ async function installNodeRuntime(portableRoot, temporaryDirectory) {
   await copyDirectoryAcrossDevices(extractedRoot, path.join(portableRoot, "runtime", "node"));
 }
 
+export function thirdPartyNotices(portableRoot, packages, pathApi = path) {
+  const paths = portablePaths(portableRoot, pathApi);
+  const ffmpegLicense = pathApi.relative(portableRoot, paths.ffmpegLicense);
+  return [
+    "第三方组件与许可证说明",
+    "",
+    `Node.js ${PORTABLE_CONFIG.node.version} (MIT): runtime\\node\\LICENSE`,
+    `yt-dlp ${PORTABLE_CONFIG.ytDlp.version} (The Unlicense): https://github.com/yt-dlp/yt-dlp/blob/${PORTABLE_CONFIG.ytDlp.version}/LICENSE`,
+    `Playwright ${packages["node_modules/playwright"]?.version ?? "unknown"} (Apache-2.0): node_modules\\playwright\\LICENSE`,
+    "Chromium: 由 Playwright 官方安装器下载，源码与许可说明 https://www.chromium.org/Home/",
+    `ffmpeg-static ${packages["node_modules/ffmpeg-static"]?.version ?? "unknown"} (GPL-3.0-or-later): node_modules\\ffmpeg-static\\LICENSE 及 ${ffmpegLicense}`,
+    `ffprobe-static ${packages["node_modules/ffprobe-static"]?.version ?? "unknown"} (MIT): node_modules\\ffprobe-static\\LICENSE`,
+    "其他 npm 依赖的许可证文件保留在各自 node_modules 子目录中。",
+  ];
+}
+
 async function writeBuildManifest(portableRoot) {
   const packageLock = JSON.parse(await fs.readFile(path.join(projectRoot, "package-lock.json"), "utf8"));
   const packages = packageLock.packages ?? {};
@@ -242,17 +265,7 @@ async function writeBuildManifest(portableRoot) {
     "Architecture: Windows x64",
   ];
   await fs.writeFile(path.join(portableRoot, "版本信息.txt"), `${lines.join("\r\n")}\r\n`, "utf8");
-  const notices = [
-    "第三方组件与许可证说明",
-    "",
-    `Node.js ${PORTABLE_CONFIG.node.version} (MIT): runtime\\node\\LICENSE`,
-    `yt-dlp ${PORTABLE_CONFIG.ytDlp.version} (The Unlicense): https://github.com/yt-dlp/yt-dlp/blob/${PORTABLE_CONFIG.ytDlp.version}/LICENSE`,
-    `Playwright ${packages["node_modules/playwright"]?.version ?? "unknown"} (Apache-2.0): node_modules\\playwright\\LICENSE`,
-    "Chromium: 由 Playwright 官方安装器下载，源码与许可说明 https://www.chromium.org/Home/",
-    `ffmpeg-static ${packages["node_modules/ffmpeg-static"]?.version ?? "unknown"} (GPL-3.0-or-later): node_modules\\ffmpeg-static\\LICENSE 及 ffmpeg.LICENSE`,
-    `ffprobe-static ${packages["node_modules/ffprobe-static"]?.version ?? "unknown"} (MIT): node_modules\\ffprobe-static\\LICENSE`,
-    "其他 npm 依赖的许可证文件保留在各自 node_modules 子目录中。",
-  ];
+  const notices = thirdPartyNotices(portableRoot, packages);
   await fs.writeFile(
     path.join(portableRoot, "第三方组件说明.txt"),
     `${notices.join("\r\n")}\r\n`,

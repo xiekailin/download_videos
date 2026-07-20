@@ -16,6 +16,7 @@ import {
   prunePortableDependencies,
   smokeTestPlan,
   smokeTestScript,
+  thirdPartyNotices,
 } from "../scripts/build-windows-portable.mjs";
 
 const temporaryDirectories = [];
@@ -93,6 +94,27 @@ describe("Windows 便携包配置", () => {
     );
     expect(PORTABLE_CONFIG.node.sha256).toMatch(/^[a-f0-9]{64}$/u);
     expect(PORTABLE_CONFIG.ytDlp.sha256).toMatch(/^[a-f0-9]{64}$/u);
+  });
+
+  it("Windows 路径契约将 FFmpeg 二进制许可证绑定到 ffmpeg.exe", () => {
+    const rootDirectory = "C:\\portable";
+    const paths = portablePaths(rootDirectory, path.win32);
+
+    expect(paths.ffmpegExecutable).toBe(
+      "C:\\portable\\node_modules\\ffmpeg-static\\ffmpeg.exe",
+    );
+    expect(paths.ffmpegLicense).toBe(`${paths.ffmpegExecutable}.LICENSE`);
+  });
+
+  it("第三方组件说明使用便携包派生的 FFmpeg 许可证路径", () => {
+    const rootDirectory = "C:\\portable";
+    const paths = portablePaths(rootDirectory, path.win32);
+    const notices = thirdPartyNotices(rootDirectory, {}, path.win32);
+
+    expect(notices.join("\n")).toContain(
+      path.win32.relative(rootDirectory, paths.ffmpegLicense),
+    );
+    expect(notices.join("\n")).not.toContain("及 ffmpeg.LICENSE");
   });
 
   it("ZIP 解压后只需进入一层目录即可找到启动器", () => {
@@ -216,7 +238,7 @@ describe("Windows 便携包配置", () => {
       touch(path.join(directory, "runtime", "node", "LICENSE")),
       touch(path.join(directory, "node_modules", "playwright", "LICENSE")),
       touch(path.join(directory, "node_modules", "ffmpeg-static", "LICENSE")),
-      touch(path.join(directory, "node_modules", "ffmpeg-static", "ffmpeg.LICENSE")),
+      touch(`${paths.ffmpegExecutable}.LICENSE`),
       touch(path.join(directory, "node_modules", "ffprobe-static", "LICENSE")),
       touch(path.join(directory, "第三方组件说明.txt")),
     ]);
