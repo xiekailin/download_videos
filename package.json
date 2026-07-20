@@ -9,6 +9,7 @@
     "start": "node local/server.mjs",
     "dev": "node --watch local/server.mjs",
     "build": "node --check local/server.mjs && node --check local/downloaders.mjs && node --check web/app.js",
+    "build:windows-online": "node scripts/build-windows-online-source.mjs",
     "test": "vitest run --config vitest.config.mjs",
     "test:coverage": "vitest run --coverage --config vitest.config.mjs"
   },

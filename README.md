@@ -24,7 +24,30 @@ chmod +x setup.command start.command
 ./setup.command
 ```
 
-## Windows 10/11 便携版（解压即用）
+## Windows 10/11 首次联网自动安装版（推荐）
+
+把 `HD-Video-Downloader-Windows-Online.zip` 发给 Windows 用户即可：
+
+1. 解压 ZIP，不要在压缩包内直接运行。
+2. 双击 `START_HERE.bat`。
+3. 首次启动会联网安装 Node.js LTS、项目依赖、Chromium 和视频下载组件，完成后自动打开网页。
+4. 以后仍然双击 `START_HERE.bat`，依赖没有变化时会直接启动。
+
+安装和启动日志保存在 `startup_logs` 文件夹。首次安装需要 Windows 10/11 自带或通过“应用安装程序”提供的 `winget`；如果系统没有 `winget`，启动器会提示手动安装 Node.js LTS。程序支持放在带中文和空格的目录中。
+
+### 在 macOS 生成可分发 ZIP
+
+双击项目根目录的 `build-windows-online-zip.command`，或执行：
+
+```bash
+npm run build:windows-online
+```
+
+成品位于 `dist/HD-Video-Downloader-Windows-Online.zip`。源码或依赖清单更新后需要重新生成并发送 ZIP；普通 Windows 用户不需要接触 GitHub Actions。
+
+此 ZIP 只包含运行所需源码，排除了本机的 `node_modules`、浏览器、下载工具、视频、日志、Git 数据和临时文件，`export` 中只保留空目录占位文件。
+
+## Windows 10/11 离线便携版（可选）
 
 便携版内置 Windows x64 版 Node.js、Chromium、FFmpeg、FFprobe 和 yt-dlp。普通用户不需要安装 Node.js：
 
@@ -34,7 +57,7 @@ chmod +x setup.command start.command
 
 请将程序解压到有写入权限的目录，不要放在 `Program Files` 中。首次运行时 Windows Defender/SmartScreen 可能会针对未签名的批处理或 yt-dlp 弹出提示。当前便携包针对 Windows x64 构建，不是 Windows ARM64 原生版。
 
-### 生成 Windows 便携 ZIP
+### 通过 GitHub Actions 生成离线便携 ZIP
 
 此项目在 macOS 上无法直接生成 Windows 二进制依赖，因此使用 GitHub Actions 的 Windows Runner 构建：
 
@@ -45,7 +68,7 @@ chmod +x setup.command start.command
 
 构建脚本会校验固定版本的 Node.js 和 yt-dlp，并在压缩前验证 Node.js、Chromium、FFmpeg、FFprobe、yt-dlp 与本地 HTTP 服务。
 
-## Windows 10/11 源码安装
+## Windows 手动安装（备用）
 
 1. 安装 [Node.js 20 LTS 或更高版本](https://nodejs.org/)。
 2. 首次使用双击 `setup.bat`。
